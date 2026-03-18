@@ -1,6 +1,7 @@
 # Tetonor
-Juego de lógica matemática (Hecho con IA)
 ---
+Juego de lógica matemática (Hecho con IA)
+
 **El Tetonor consta de una cuadrícula superior (16 resultados) y una lista inferior (16 números).**
 
 - Elige **dos números** de la lista inferior.
