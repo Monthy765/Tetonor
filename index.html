@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <!-- PWA para iPhone -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- PWA general -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffffff">
+
+    <title>Reto Tetonor</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --cell-bg: #ffffff;
+            --border-color: #ccc;
+            --primary: #4a90e2;
+            --secondary: #f39c12;
+            --danger: #e74c3c;
+            --success: #27ae60;
+            --neutral: #7f8c8d;
+            --text: #333;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color); color: var(--text);
+            display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0;
+        }
+        h1 { margin-top: 10px; margin-bottom: 15px; text-align: center; font-size: 24px; }
+        
+        .rules {
+            background: var(--cell-bg); border: 1px solid var(--border-color); border-radius: 8px;
+            width: 100%; max-width: 800px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .rules summary {
+            padding: 15px; font-size: 16px; font-weight: bold; cursor: pointer;
+            background-color: #e9ecef; border-radius: 8px; list-style: none;
+        }
+        .rules summary::-webkit-details-marker { display: none; }
+        .rules-content { padding: 15px; font-size: 14px; line-height: 1.5; }
+        .rules-content ul { margin-top: 5px; margin-bottom: 0; padding-left: 20px; }
+
+        /* --- CALCULADORA FLOTANTE --- */
+        .btn-calc-toggle {
+            background-color: #8e44ad; color: white; padding: 10px 20px; margin-bottom: 20px;
+            font-size: 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;
+            transition: background-color 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .btn-calc-toggle:hover { background-color: #9b59b6; }
+        
+        .calc-popup {
+            position: fixed; z-index: 1000; background-color: #2c3e50; border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 260px; font-family: 'Courier New', Courier, monospace;
+            /* display: none se maneja por JS */
+        }
+        .calc-header {
+            display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;
+            background-color: #1a252f; color: white; border-radius: 12px 12px 0 0; cursor: grab;
+            font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 14px; user-select: none;
+            touch-action: none; 
+        }
+        .calc-header:active { cursor: grabbing; }
+        .calc-close {
+            background: transparent; border: none; color: #e74c3c; font-size: 18px; 
+            cursor: pointer; padding: 0; line-height: 1; transition: color 0.2s;
+        }
+        .calc-close:hover { color: #ff7979; }
+        .calc-wrapper { padding: 15px; }
+
+        .calc-screen {
+            background-color: #ecf0f1; border-radius: 6px; padding: 10px; margin-bottom: 15px;
+            display: flex; flex-direction: column; justify-content: space-between; height: 65px;
+            box-shadow: inset 0 3px 6px rgba(0,0,0,0.1); border: 2px solid #95a5a6;
+        }
+        .calc-op-line { text-align: left; color: #7f8c8d; font-size: 14px; min-height: 16px; }
+        .calc-res-line { text-align: right; color: #2c3e50; font-size: 26px; font-weight: bold; overflow: hidden; white-space: nowrap; }
+        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .calc-btn {
+            background-color: #ecf0f1; border: none; border-radius: 6px; padding: 12px 0;
+            font-size: 18px; font-weight: bold; cursor: pointer; color: #2c3e50;
+            transition: background-color 0.1s, transform 0.1s; font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+        .calc-btn:active { transform: scale(0.95); }
+        .calc-btn:hover { background-color: #bdc3c7; }
+        .calc-btn.op { background-color: #f39c12; color: white; }
+        .calc-btn.op:hover { background-color: #e67e22; }
+        .calc-btn.fact { background-color: #27ae60; color: white; font-size: 14px; }
+        .calc-btn.fact:hover { background-color: #2ecc71; }
+        .calc-btn.ac { background-color: #e74c3c; color: white; font-size: 16px; }
+        .calc-btn.ac:hover { background-color: #c0392b; }
+        .calc-btn.eq { background-color: #3498db; color: white; grid-column: span 4; padding: 10px 0; }
+        .calc-btn.eq:hover { background-color: #2980b9; }
+
+        /* Controles y Juego */
+        .controls {
+            padding: 15px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;
+            justify-content: center; width: 100%; box-sizing: border-box;
+        }
+        .controls-group { display: flex; align-items: center; gap: 5px; }
+        .controls label { font-weight: bold; font-size: 14px; cursor: pointer; }
+        .controls input[type="number"], .controls select, .controls button {
+            padding: 8px; font-size: 14px; border: 1px solid var(--border-color); border-radius: 4px;
+        }
+        .controls input[type="number"] { width: 60px; }
+        .controls input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+        
+        button {
+            background-color: var(--primary); color: white; border: none; border-radius: 6px;
+            cursor: pointer; transition: background-color 0.2s; font-weight: bold;
+        }
+        button:hover { background-color: #357abd; }
+        .btn-hint { background-color: var(--secondary); }
+        .btn-hint:hover { background-color: #d68910; }
+        .btn-hint:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .btn-danger { background-color: var(--danger); }
+        .btn-danger:hover { background-color: #c0392b; }
+        .btn-save { background-color: var(--success); }
+        .btn-save:hover { background-color: #1e8449; }
+        .btn-reset { background-color: var(--neutral); }
+        .btn-reset:hover { background-color: #636e72; }
+        
+        /* Cuadrícula Superior */
+        .grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+            margin-bottom: 25px; width: 100%; max-width: 800px;
+        }
+        .cell {
+            position: relative; 
+            background: var(--cell-bg); border: 2px solid var(--border-color); border-radius: 8px;
+            padding: 10px 5px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: background-color 0.3s;
+        }
+        .clear-cell {
+            position: absolute; top: 4px; right: 4px; background: none; border: none;
+            color: #7f8c8d; font-size: 18px; font-weight: bold; padding: 2px 5px; cursor: pointer; transition: color 0.2s;
+        }
+        .clear-cell:hover { color: #e74c3c; background: none; }
+        
+        .target-num { font-size: 22px; font-weight: bold; margin-bottom: 8px; color: var(--primary); }
+        .operation { display: flex; justify-content: center; gap: 3px; }
+        .operation select {
+            font-size: 15px; padding: 5px 2px; border: 1px solid var(--border-color);
+            border-radius: 4px; background-color: white; cursor: pointer; min-width: 45px;
+            transition: all 0.2s;
+        }
+        
+        /* Validaciones Cuadrícula Visuales */
+        .cell-complete { background-color: #bdc3c7 !important; border-color: #95a5a6 !important; }
+        .cell-correct { background-color: #d4edda !important; border-color: #28a745 !important; }
+        .cell-partial { background-color: #fdebd0 !important; border-color: #f39c12 !important; }
+        .cell-wrong { background-color: #f8d7da !important; border-color: #e74c3c !important; }
+
+        .highlight-op { background-color: #d4edda !important; border-color: #28a745 !important; }
+        .missing-op { border: 2px solid #e74c3c !important; background-color: #f8d7da !important; }
+        .pairing-error { border: 2px solid #e74c3c !important; background-color: #f8d7da !important; color: #c0392b !important; }
+
+        /* Lista Inferior y Estados Visuales */
+        h3 { margin-bottom: 10px; font-size: 18px; text-align: center; }
+        .bottom-list {
+            display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+            width: 100%; max-width: 800px; margin-bottom: 25px;
+        }
+        .list-item {
+            background: var(--cell-bg); border: 2px solid var(--border-color); width: 42px; height: 42px;
+            display: flex; align-items: center; justify-content: center; font-size: 18px;
+            font-weight: bold; border-radius: 6px; transition: all 0.3s; cursor: help;
+        }
+        .list-item input {
+            width: 100%; height: 100%; border: none; text-align: center; font-size: 18px;
+            font-weight: bold; background: #fff3cd; border-radius: 4px; transition: all 0.3s;
+            padding: 0; outline: none; cursor: help;
+        }
+        
+        .invalid-order { border-color: #e74c3c !important; background-color: #f8d7da !important; }
+        .invalid-order input { background-color: #f8d7da !important; color: #c0392b !important; }
+        
+        .used-half { border-color: #f39c12 !important; background-color: #fdebd0 !important; }
+        .used-half input { background-color: #fdebd0 !important; }
+        
+        .used-full { border-color: #95a5a6 !important; background-color: #ecf0f1 !important; color: #95a5a6 !important; text-decoration: line-through; }
+        .used-full input { background-color: #ecf0f1 !important; color: #95a5a6 !important; text-decoration: line-through; }
+
+        .action-buttons {
+            display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 800px;
+        }
+        .action-buttons button { padding: 12px 20px; font-size: 16px; flex-grow: 1; }
+
+        #message {
+            font-size: 16px; font-weight: bold; padding: 12px 20px; border-radius: 6px;
+            width: 100%; max-width: 800px; text-align: center; min-height: 24px; box-sizing: border-box;
+        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .hint-msg { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+
+        @media (max-width: 600px) {
+            .controls { flex-direction: column; align-items: stretch; padding: 10px; }
+            .controls-group { justify-content: space-between; width: 100%; }
+            .controls button { width: 100%; padding: 12px; margin-top: 5px; }
+            .grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .action-buttons { flex-direction: column; }
+            .action-buttons button { width: 100%; padding: 15px; }
+            .list-item { width: 38px; height: 38px; font-size: 16px; }
+            .list-item input { font-size: 16px; }
+            .operation select { min-width: 40px; font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Rompecabezas Tetonor</h1>
+
+    <details class="rules">
+        <summary>📖 Haz clic aquí para ver las Reglas</summary>
+        <div class="rules-content">
+            <p><strong>El Tetonor consta de una cuadrícula superior (16 resultados) y una lista inferior (16 números).</strong></p>
+            <ul>
+                <li>Elige <strong>dos números</strong> de la lista inferior.</li>
+                <li>Con esa pareja, realiza una <strong>suma</strong> y una <strong>multiplicación</strong> cuyos resultados (ambos) estén en la cuadrícula superior.</li>
+                <li>Cada número de la lista inferior solo puede usarse una vez.</li>
+                <li>En la lista inferior los números deberán estar ordenados de forma ascendente.</li>
+                <li><strong>Sobre los números repetidos:</strong>
+                    <ul>
+                        <li>Si están <strong>activados</strong>: Puede haber repetidos, pero un número solo puede repetirse una vez (<strong>solo 2 copias como máximo</strong>).</li>
+                        <li>Si están <strong>desactivados</strong>: De cada número solo puede haber <strong>una única copia</strong>.</li>
+                    </ul>
+                </li>
+            </ul>
+            <p>Debes encontrar todos los números de la lista inferior de tal forma que a todos los números de la cuadrícula les corresponda una operación válida (suma o producto) de alguna pareja de la lista inferior.</p>
+            <ul>
+                <li><strong>Avisos de color en la cuadrícula (Automáticos):</strong></li>
+                <ul>
+                    <li>Si emparejas un número con compañeros distintos y no tienes copias para ello, la casilla se pondrá <span style="color:#e74c3c; font-weight:bold;">Roja</span>.</li>
+                    <li>Si usas una pareja para sumar dos veces (o multiplicar dos veces), también se marcará en <span style="color:#e74c3c; font-weight:bold;">Rojo</span>. Pasa el ratón sobre ellas para ver el error.</li>
+                    <li>Cuando rellenes por completo una operación, la celda se pondrá <span style="color:#7f8c8d; font-weight:bold;">Gris Oscura</span>.</li>
+                </ul>
+                <li><strong>Avisos de color en la cuadrícula (Al Comprobar):</strong> Al darle al botón Comprobar, las celdas grises completas revelarán si vas por buen camino:
+                    <ul>
+                        <li><span style="color:#27ae60; font-weight:bold;">Verde</span>: Es la pareja exacta que resuelve esa celda y cuadra con el resto del tablero.</li>
+                        <li><span style="color:#f39c12; font-weight:bold;">Naranja</span>: Parcialmente correcta (acertaste algo) <strong>O es correcta matemáticamente pero es un "callejón sin salida"</strong> que no te servirá para resolver las demás.</li>
+                        <li><span style="color:#e74c3c; font-weight:bold;">Rojo</span>: Totalmente incorrecta.</li>
+                    </ul>
+                </li>
+                <li><strong>Colores en la lista inferior:</strong></li>
+                <ul>
+                    <li><span style="color:#e74c3c;">Rojo</span>: El número no está en orden ascendente (o hay demasiados repetidos).</li>
+                    <li><span style="color:#f39c12;">Naranja</span>: Lo has usado en una operación pero te falta la pareja, o lo has colocado pero no has elegido el signo (+ o *).</li>
+                    <li><span style="color:#95a5a6; text-decoration:line-through;">Tachado</span>: Pareja completada correctamente, número agotado.</li>
+                </ul>
+            </ul>
+        </div>
+    </details>
+
+    <details class="rules" id="settings-details">
+        <summary>⚙️ Configuración y Nuevo Reto</summary>
+        <div class="controls">
+            <div class="controls-group">
+                <label>Dificultad:</label>
+                <select id="difficulty" onchange="updateSettings()">
+                    <option value="baja">Baja</option>
+                    <option value="media" selected>Media</option>
+                    <option value="alta">Alta</option>
+                </select>
+            </div>
+            <div class="controls-group">
+                <label>Rango (X):</label>
+                <input type="number" id="maxRange" value="200" min="100" max="500">
+            </div>
+            <div class="controls-group">
+                <label>Ocultos:</label>
+                <input type="number" id="hiddenCount" value="8" min="0" max="16">
+            </div>
+            <div class="controls-group">
+                <label style="display:flex; align-items:center; gap:5px;">
+                    <input type="checkbox" id="allowRepeats" checked onchange="saveProgress(true)"> Permitir Repetidos
+                </label>
+            </div>
+            <button onclick="generatePuzzle(true)">🔄 Generar Reto</button>
+            <button class="btn-reset" onclick="resetDefaults()">⚙️ Por Defecto</button>
+        </div>
+    </details>
+
+    <button class="btn-calc-toggle" onclick="toggleCalc()">🧮 Abrir Calculadora</button>
+
+    <div id="calc-popup" class="calc-popup" style="display: none;">
+        <div class="calc-header" id="calc-header">
+            <span>🧮 Calculadora Prime</span>
+            <button class="calc-close" onclick="toggleCalc()" title="Cerrar">✖</button>
+        </div>
+        <div class="calc-wrapper">
+            <div class="calc-screen">
+                <div class="calc-op-line" id="calc-op-line"></div>
+                <div class="calc-res-line" id="calc-res-line">0</div>
+            </div>
+            <div class="calc-grid">
+                <button class="calc-btn" onclick="calcAction('7')">7</button>
+                <button class="calc-btn" onclick="calcAction('8')">8</button>
+                <button class="calc-btn" onclick="calcAction('9')">9</button>
+                <button class="calc-btn op" onclick="calcAction('/')">÷</button>
+
+                <button class="calc-btn" onclick="calcAction('4')">4</button>
+                <button class="calc-btn" onclick="calcAction('5')">5</button>
+                <button class="calc-btn" onclick="calcAction('6')">6</button>
+                <button class="calc-btn op" onclick="calcAction('*')">x</button>
+
+                <button class="calc-btn" onclick="calcAction('1')">1</button>
+                <button class="calc-btn" onclick="calcAction('2')">2</button>
+                <button class="calc-btn" onclick="calcAction('3')">3</button>
+                <button class="calc-btn op" onclick="calcAction('-')">-</button>
+
+                <button class="calc-btn ac" onclick="calcAction('AC')">AC</button>
+                <button class="calc-btn" onclick="calcAction('0')">0</button>
+                <button class="calc-btn fact" onclick="calcAction('FACT')">FACT</button>
+                <button class="calc-btn op" onclick="calcAction('+')">+</button>
+
+                <button class="calc-btn eq" onclick="calcAction('=')">=</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <h3>Lista Inferior (Números disponibles)</h3>
+    <div class="bottom-list" id="bottom-list"></div>
+
+    <div class="action-buttons">
+        <button class="btn-save" onclick="saveProgress(false)">💾 Guardar</button>
+        <button id="btn-hint" class="btn-hint" onclick="showHint()">💡 Pista</button>
+        <button onclick="checkSolution()">✅ Comprobar</button>
+        <button class="btn-danger" onclick="revealSolution()">👁️ Solución</button>
+    </div>
+    
+    <div id="message"></div>
+
+    <script>
+        const SAVE_KEY = 'tetonor_save_data';
+        const CALC_POS_KEY = 'tetonor_calc_pos';
+        let currentSolution = {};
+        let currentDifficulty = 'media';
+        let hintLimits = { bottom: 0, grid: 0, total: 0 };
+        let hintsUsed = { bottom: 0, grid: 0, total: 0 };
+
+        // --- SISTEMA DE ARRASTRE (DRAG & DROP) PARA CALCULADORA ---
+        const calcPopup = document.getElementById('calc-popup');
+        const calcHeader = document.getElementById('calc-header');
+        let isDragging = false;
+        let dragOffsetX = 0, dragOffsetY = 0;
+
+        function initDrag(e) {
+            if (e.target.tagName.toLowerCase() === 'button') return;
+            
+            isDragging = true;
+            let clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+            let clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+            
+            const rect = calcPopup.getBoundingClientRect();
+            dragOffsetX = clientX - rect.left;
+            dragOffsetY = clientY - rect.top;
+
+            document.addEventListener('mousemove', doDrag);
+            document.addEventListener('touchmove', doDrag, { passive: false });
+            document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchend', stopDrag);
+        }
+
+        function doDrag(e) {
+            if (!isDragging) return;
+            e.preventDefault(); 
+            let clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+            let clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+            
+            let newX = clientX - dragOffsetX;
+            let newY = clientY - dragOffsetY;
+            
+            let maxX = window.innerWidth - 50;
+            let maxY = window.innerHeight - 50;
+            newX = Math.max(-calcPopup.offsetWidth + 50, Math.min(newX, maxX));
+            newY = Math.max(0, Math.min(newY, maxY));
+            
+            calcPopup.style.left = newX + 'px';
+            calcPopup.style.top = newY + 'px';
+        }
+
+        function stopDrag() {
+            if (!isDragging) return;
+            isDragging = false;
+            document.removeEventListener('mousemove', doDrag);
+            document.removeEventListener('touchmove', doDrag);
+            document.removeEventListener('mouseup', stopDrag);
+            document.removeEventListener('touchend', stopDrag);
+            
+            const rect = calcPopup.getBoundingClientRect();
+            localStorage.setItem(CALC_POS_KEY, JSON.stringify({x: rect.left, y: rect.top}));
+        }
+
+        calcHeader.addEventListener('mousedown', initDrag);
+        calcHeader.addEventListener('touchstart', initDrag, { passive: false });
+
+        function toggleCalc() {
+            if (calcPopup.style.display === 'none' || calcPopup.style.display === '') {
+                calcPopup.style.display = 'block';
+                let savedPos = localStorage.getItem(CALC_POS_KEY);
+                if (savedPos) {
+                    let pos = JSON.parse(savedPos);
+                    let x = Math.max(0, Math.min(pos.x, window.innerWidth - calcPopup.offsetWidth));
+                    let y = Math.max(0, Math.min(pos.y, window.innerHeight - calcPopup.offsetHeight));
+                    calcPopup.style.left = x + 'px';
+                    calcPopup.style.top = y + 'px';
+                } else {
+                    calcPopup.style.left = Math.max(0, (window.innerWidth / 2 - calcPopup.offsetWidth / 2)) + 'px';
+                    calcPopup.style.top = Math.max(0, (window.innerHeight / 2 - calcPopup.offsetHeight / 2)) + 'px';
+                }
+            } else {
+                calcPopup.style.display = 'none';
+            }
+        }
+
+        // --- LÓGICA INTERNA DE LA CALCULADORA GRÁFICA ---
+        let calcCurrent = '0';
+        let calcPrev = '';
+        let calcOp = '';
+        let calcFinished = false;
+        let origNumForFact = 0;
+
+        function calcAction(action) {
+            const opLine = document.getElementById('calc-op-line');
+            const resLine = document.getElementById('calc-res-line');
+
+            if (action === 'AC') {
+                calcCurrent = '0'; calcPrev = ''; calcOp = ''; calcFinished = false;
+                opLine.innerText = '';
+            } else if (action === 'FACT') {
+                let num = parseInt(calcCurrent);
+                if (isNaN(num) || num < 2) {
+                    resLine.innerText = "Error"; calcCurrent = '0'; calcFinished = true; return;
+                }
+                origNumForFact = num;
+                opLine.innerText = `FACT(${num}) = ?`;
+                let factors = [];
+                let n = num;
+                for (let i = 2; i <= Math.sqrt(n); i++) {
+                    while (n % i === 0) { factors.push(i); n /= i; }
+                }
+                if (n > 1) factors.push(n);
+                calcCurrent = factors.join(' x ');
+                calcFinished = true; calcPrev = ''; calcOp = '';
+            } else if (['+', '-', '*', '/'].includes(action)) {
+                if (calcCurrent.includes(' x ')) calcCurrent = origNumForFact.toString();
+                if (calcOp !== '' && !calcFinished) calcAction('=');
+                calcOp = action;
+                calcPrev = calcCurrent;
+                let displayOp = action === '*' ? 'x' : (action === '/' ? '÷' : action);
+                opLine.innerText = `${calcPrev} ${displayOp} ? = ?`;
+                calcFinished = true;
+            } else if (action === '=') {
+                if (calcOp === '' || calcPrev === '') return;
+                if (calcCurrent.includes(' x ')) calcCurrent = origNumForFact.toString();
+                
+                let n1 = parseFloat(calcPrev);
+                let n2 = parseFloat(calcCurrent);
+                let res = 0;
+
+                switch(calcOp) {
+                    case '+': res = n1 + n2; break;
+                    case '-': res = n1 - n2; break;
+                    case '*': res = n1 * n2; break;
+                    case '/': res = n2 === 0 ? 'Error' : n1 / n2; break;
+                }
+                
+                if (typeof res === 'number') res = Math.round(res * 10000) / 10000;
+                let displayOp = calcOp === '*' ? 'x' : (calcOp === '/' ? '÷' : calcOp);
+                opLine.innerText = `${calcPrev} ${displayOp} ${n2} = ?`;
+                calcCurrent = res.toString();
+                calcPrev = ''; calcOp = ''; calcFinished = true;
+            } else {
+                if (calcFinished || calcCurrent === '0' || calcCurrent === 'Error') {
+                    calcCurrent = action; calcFinished = false;
+                } else {
+                    if (calcCurrent.length < 15) calcCurrent += action;
+                }
+                if (calcOp !== '') {
+                    let displayOp = calcOp === '*' ? 'x' : (calcOp === '/' ? '÷' : calcOp);
+                    opLine.innerText = `${calcPrev} ${displayOp} ${calcCurrent} = ?`;
+                } else {
+                    opLine.innerText = '';
+                }
+            }
+            
+            if (calcCurrent.length > 12) resLine.style.fontSize = "16px";
+            else resLine.style.fontSize = "26px";
+            resLine.innerText = calcCurrent;
+        }
+
+
+        // --- LÓGICA DEL JUEGO ---
+        document.addEventListener('keydown', (e) => {
+            if (e.target.matches('.list-input')) {
+                if (['-', '+', 'e', 'E', '.', ','].includes(e.key)) { e.preventDefault(); }
+            }
+        });
+
+        document.addEventListener('input', (e) => {
+            if (e.target.matches('.list-input')) {
+                let maxR = parseInt(document.getElementById('maxRange').value) || 200;
+                let val = parseInt(e.target.value);
+                if (!isNaN(val)) {
+                    if (val < 1) e.target.value = 1;
+                    if (val > maxR) e.target.value = maxR;
+                }
+                validateBottomList(); updateInputConstraints(); updateDropdownOptions(); updateUsage(); saveProgress(true);
+            }
+        });
+
+        document.addEventListener('change', (e) => {
+            if (e.target.matches('.val-x, .val-y, .op')) {
+                let cell = e.target.closest('.cell');
+                if (cell) cell.classList.remove('cell-correct', 'cell-partial', 'cell-wrong');
+                updateCellCompleteState(); updateDropdownOptions(); updateUsage(); saveProgress(true);
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('.clear-cell')) {
+                let cell = e.target.closest('.cell');
+                let xSel = cell.querySelector('.val-x');
+                let ySel = cell.querySelector('.val-y');
+                let opSel = cell.querySelector('.op');
+                
+                if (xSel.disabled) return;
+                xSel.value = '?'; ySel.value = '?'; opSel.value = '?';
+                
+                cell.classList.remove('cell-correct', 'cell-partial', 'cell-wrong');
+                updateCellCompleteState(); updateDropdownOptions(); updateUsage(); saveProgress(true);
+            }
+        });
+
+        function updateSettings() {
+            const diff = document.getElementById('difficulty').value;
+            const maxRange = document.getElementById('maxRange');
+            const hiddenCount = document.getElementById('hiddenCount');
+            if (diff === 'baja') { maxRange.value = 100; hiddenCount.value = 4; }
+            else if (diff === 'media') { maxRange.value = 200; hiddenCount.value = 8; }
+            else if (diff === 'alta') { maxRange.value = 500; hiddenCount.value = 12; }
+            saveProgress(true);
+        }
+
+        function resetDefaults() {
+            document.getElementById('difficulty').value = 'media';
+            document.getElementById('maxRange').value = 200;
+            document.getElementById('hiddenCount').value = 8;
+            document.getElementById('allowRepeats').checked = true;
+            generatePuzzle(true);
+            showMessage("Ajustes restablecidos a por defecto. Se ha generado un reto nuevo.", "success");
+        }
+
+        function generatePuzzle(isManualNew = false) {
+            if (isManualNew) {
+                localStorage.removeItem(SAVE_KEY);
+                document.getElementById('settings-details').removeAttribute('open'); // Cierra el menú al generar
+            }
+            document.getElementById('message').innerText = ''; document.getElementById('message').className = '';
+            document.getElementById('btn-hint').disabled = false;
+
+            currentDifficulty = document.getElementById('difficulty').value;
+            const maxRange = parseInt(document.getElementById('maxRange').value) || 200;
+            const hiddenCount = parseInt(document.getElementById('hiddenCount').value) || 8;
+            const allowRepeats = document.getElementById('allowRepeats').checked;
+
+            hintsUsed = { bottom: 0, grid: 0, total: 0 };
+            if (currentDifficulty === 'baja') hintLimits = { bottom: Infinity, grid: Infinity, total: Infinity };
+            else if (currentDifficulty === 'media') hintLimits = { bottom: Math.floor(hiddenCount / 2), grid: 4, total: Infinity };
+            else if (currentDifficulty === 'alta') hintLimits = { bottom: Infinity, grid: Infinity, total: 5 };
+
+            let pairs = [], list = [], gridData = [];
+            let validBoard = false; let attemptBoard = 0; let currentMaxRange = maxRange;
+
+            while (!validBoard && attemptBoard < 100) {
+                attemptBoard++; pairs = []; list = []; gridData = [];
+                let freq = {}; let targetFreq = {}; let boardFailed = false;
+
+                for (let i = 0; i < 8; i++) {
+                    let maxFactor = Math.floor(Math.sqrt(currentMaxRange));
+                    let validPairFound = false; let attempts = 0;
+                    
+                    while (!validPairFound && attempts < 300) {
+                        attempts++;
+                        let x = Math.floor(Math.random() * maxFactor) + 1;
+                        let maxY = Math.floor(currentMaxRange / x);
+                        let y = Math.floor(Math.random() * (maxY - x + 1)) + x; 
+                        
+                        let fx = freq[x] || 0; let fy = freq[y] || 0;
+
+                        if (!allowRepeats) {
+                            if (x === y) continue;
+                            if (fx > 0 || fy > 0) continue;
+                            let sum = x + y; let prod = x * y;
+                            if (sum === prod) continue;
+                            if (targetFreq[sum] || targetFreq[prod]) continue;
+
+                            freq[x] = 1; freq[y] = 1;
+                            targetFreq[sum] = 1; targetFreq[prod] = 1;
+                            validPairFound = true; pairs.push([x, y]); list.push(x, y);
+                        } else {
+                            if (x === y) {
+                                if (fx + 2 <= 2) { freq[x] = fx + 2; validPairFound = true; pairs.push([x, y]); list.push(x, y); }
+                            } else {
+                                if (fx + 1 <= 2 && fy + 1 <= 2) {
+                                    freq[x] = fx + 1; freq[y] = fy + 1; validPairFound = true; pairs.push([x, y]); list.push(x, y);
+                                }
+                            }
+                        }
+                    }
+                    if (!validPairFound) { boardFailed = true; break; }
+                }
+                if (!boardFailed) validBoard = true;
+                else if (attemptBoard % 20 === 0 && !allowRepeats) currentMaxRange += 50; 
+            }
+
+            for (let i = 0; i < 8; i++) {
+                let x = pairs[i][0], y = pairs[i][1];
+                gridData.push({ target: x + y, x: x, y: y, op: '+' });
+                gridData.push({ target: x * y, x: x, y: y, op: '*' });
+            }
+
+            list.sort((a, b) => a - b);
+            let hiddenIndices = new Set();
+            while(hiddenIndices.size < hiddenCount) hiddenIndices.add(Math.floor(Math.random() * 16));
+            gridData.sort(() => Math.random() - 0.5);
+
+            currentSolution = { list, pairs, gridData, hiddenIndices };
+            
+            renderPuzzle(); updateCellCompleteState(); validateBottomList(); updateInputConstraints();
+            updateDropdownOptions(); updateUsage(); updateHintUI();
+            
+            if (isManualNew) saveProgress(true); 
+        }
+
+        function renderPuzzle() {
+            const gridEl = document.getElementById('grid');
+            const listEl = document.getElementById('bottom-list');
+            gridEl.innerHTML = ''; listEl.innerHTML = '';
+            let maxR = parseInt(document.getElementById('maxRange').value) || 200;
+
+            currentSolution.gridData.forEach(data => {
+                const cell = document.createElement('div');
+                cell.className = 'cell'; cell.dataset.cx = data.x; cell.dataset.cy = data.y; cell.dataset.cop = data.op;
+                cell.innerHTML = `
+                    <button class="clear-cell" title="Limpiar casilla">↻</button>
+                    <div class="target-num" data-val="${data.target}">${data.target}</div>
+                    <div class="operation">
+                        <select class="val-x"><option value="?">?</option></select>
+                        <select class="op">
+                            <option value="?">?</option><option value="+">+</option><option value="*">*</option>
+                        </select>
+                        <select class="val-y"><option value="?">?</option></select>
+                    </div>
+                `;
+                gridEl.appendChild(cell);
+            });
+
+            currentSolution.list.forEach((num, index) => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                if (currentSolution.hiddenIndices.has(index)) {
+                    item.innerHTML = `<input type="number" class="list-input" data-correct="${num}" min="1" max="${maxR}">`;
+                } else {
+                    item.innerText = num; item.dataset.val = num;
+                }
+                listEl.appendChild(item);
+            });
+        }
+
+        function updateCellCompleteState() {
+            document.querySelectorAll('.cell').forEach(cell => {
+                const xVal = cell.querySelector('.val-x').value;
+                const yVal = cell.querySelector('.val-y').value;
+                const opVal = cell.querySelector('.op').value;
+                
+                if (xVal !== '?' && yVal !== '?' && opVal !== '?') cell.classList.add('cell-complete');
+                else cell.classList.remove('cell-complete');
+            });
+        }
+
+        function updateInputConstraints() {
+            let maxR = parseInt(document.getElementById('maxRange').value) || 200;
+            let allowRepeats = document.getElementById('allowRepeats').checked;
+            let offset = allowRepeats ? 0 : 1;
+            const items = document.querySelectorAll('.list-item');
+            let values = [];
+            
+            items.forEach(item => {
+                let valStr = item.querySelector('input') ? item.querySelector('input').value : item.dataset.val;
+                values.push(isNaN(parseInt(valStr)) ? null : parseInt(valStr));
+            });
+
+            items.forEach((item, i) => {
+                let input = item.querySelector('input');
+                if (input) {
+                    let minBound = 1;
+                    for (let j = i - 1; j >= 0; j--) {
+                        if (values[j] !== null) { minBound = values[j] + offset; break; }
+                    }
+                    let maxBound = maxR;
+                    for (let j = i + 1; j < values.length; j++) {
+                        if (values[j] !== null) { maxBound = values[j] - offset; break; }
+                    }
+                    if (maxBound < minBound) maxBound = minBound; 
+                    input.min = minBound; input.max = maxBound;
+                }
+            });
+        }
+
+        function validateBottomList() {
+            const items = document.querySelectorAll('.list-item');
+            let allowRepeats = document.getElementById('allowRepeats').checked;
+            let values = []; let counts = {};
+            
+            items.forEach(item => {
+                let valStr = item.querySelector('input') ? item.querySelector('input').value : item.dataset.val;
+                let val = parseInt(valStr);
+                values.push(isNaN(val) ? null : val);
+                item.classList.remove('invalid-order'); item.title = "";
+            });
+
+            let isValid = true; let overTwoCopies = false;
+            for (let i = 0; i < values.length; i++) {
+                if (values[i] === null) continue;
+                counts[values[i]] = (counts[values[i]] || 0) + 1;
+                if (counts[values[i]] > 2) overTwoCopies = true;
+
+                for (let j = 0; j < i; j++) {
+                    if (values[j] !== null) {
+                        if (allowRepeats && values[j] > values[i]) { items[i].classList.add('invalid-order'); isValid = false; } 
+                        else if (!allowRepeats && values[j] >= values[i]) {
+                            items[i].classList.add('invalid-order'); isValid = false;
+                            if (values[j] === values[i]) items[i].title = "No se permiten números repetidos.";
+                        }
+                    }
+                }
+                for (let j = i + 1; j < values.length; j++) {
+                    if (values[j] !== null) {
+                        if (allowRepeats && values[j] < values[i]) { items[i].classList.add('invalid-order'); isValid = false; } 
+                        else if (!allowRepeats && values[j] <= values[i]) {
+                            items[i].classList.add('invalid-order'); isValid = false;
+                            if (values[j] === values[i]) items[i].title = "No se permiten números repetidos.";
+                        }
+                    }
+                }
+            }
+
+            if (overTwoCopies) {
+                isValid = false;
+                for (let i = 0; i < values.length; i++) {
+                    if (counts[values[i]] > 2) {
+                        items[i].classList.add('invalid-order');
+                        items[i].title = "Un número solo puede aparecer un máximo de 2 veces en total.";
+                    }
+                }
+            }
+            return isValid;
+        }
+
+        function updateDropdownOptions() {
+            let uniqueValues = new Set(); let C = {};
+            document.querySelectorAll('.list-item').forEach(item => {
+                let valStr = item.querySelector('input') ? item.querySelector('input').value : item.dataset.val;
+                let val = parseInt(valStr);
+                if (!isNaN(val)) { uniqueValues.add(val); C[val] = (C[val] || 0) + 1; }
+            });
+            let sortedVals = Array.from(uniqueValues).sort((a,b) => a-b);
+            let U = {};
+            document.querySelectorAll('.cell').forEach(cell => {
+                const x = parseInt(cell.querySelector('.val-x').value); const y = parseInt(cell.querySelector('.val-y').value);
+                if (!isNaN(x)) U[x] = (U[x] || 0) + 1;
+                if (!isNaN(y)) U[y] = (U[y] || 0) + 1;
+            });
+            
+            document.querySelectorAll('.cell').forEach(cell => {
+                let xSelect = cell.querySelector('.val-x'); let ySelect = cell.querySelector('.val-y');
+                let currX = xSelect.value; let currY = ySelect.value;
+
+                const populate = (select, currentVal, otherVal) => {
+                    select.innerHTML = '<option value="?">?</option>';
+                    sortedVals.forEach(v => {
+                        let show = false;
+                        if (v.toString() === currentVal) { show = true; } 
+                        else {
+                            let uCount = U[v] || 0; let maxCapacity = 2 * (C[v] || 0); 
+                            if (uCount < maxCapacity) {
+                                if (v.toString() === otherVal) { if ((C[v] || 0) >= 2) show = true; } 
+                                else { show = true; }
+                            }
+                        }
+                        if (show) {
+                            let opt = document.createElement('option'); opt.value = v; opt.innerText = v; select.appendChild(opt);
+                        }
+                    });
+                    select.value = currentVal;
+                };
+                populate(xSelect, currX, currY); populate(ySelect, currY, currX);
+            });
+        }
+
+        function updateUsage() {
+            let C = {}; let itemsByVal = {};
+            document.querySelectorAll('.list-item').forEach(item => {
+                let valStr = item.querySelector('input') ? item.querySelector('input').value : item.dataset.val;
+                let val = parseInt(valStr);
+                item.classList.remove('used-full', 'used-half'); 
+                if (!item.classList.contains('invalid-order')) item.title = ""; 
+                if (!isNaN(val)) {
+                    C[val] = (C[val] || 0) + 1; itemsByVal[val] = itemsByVal[val] || []; itemsByVal[val].push(item);
+                }
+            });
+
+            let counts = {}; let N = {}; let S = {}; let P = {}; let missingOps = false;
+
+            document.querySelectorAll('.cell').forEach(cell => {
+                const xVal = cell.querySelector('.val-x').value; const yVal = cell.querySelector('.val-y').value;
+                const opSelect = cell.querySelector('.op'); const op = opSelect.value;
+                
+                if (xVal !== '?' && yVal !== '?' && op === '?') { opSelect.classList.add('missing-op'); missingOps = true; } 
+                else { opSelect.classList.remove('missing-op'); }
+
+                const x = parseInt(xVal); const y = parseInt(yVal);
+                if (!isNaN(x) && !isNaN(y)) {
+                    let pStr = Math.min(x, y) + "," + Math.max(x, y);
+                    N[pStr] = (N[pStr] || 0) + 1;
+                    if (op === '+') S[pStr] = (S[pStr] || 0) + 1;
+                    if (op === '*') P[pStr] = (P[pStr] || 0) + 1;
+                }
+
+                if (!isNaN(x)) {
+                    counts[x] = counts[x] || { s: 0, p: 0, u: 0 };
+                    if (op === '+') counts[x].s++; else if (op === '*') counts[x].p++; else counts[x].u++;
+                }
+                if (!isNaN(y)) {
+                    counts[y] = counts[y] || { s: 0, p: 0, u: 0 };
+                    if (op === '+') counts[y].s++; else if (op === '*') counts[y].p++; else counts[y].u++;
+                }
+            });
+
+            let pairErrors = new Set();
+            for (let vStr in C) {
+                let v = parseInt(vStr); let reqCopies = 0;
+                let vPairs = Object.keys(N).filter(p => p.split(',').includes(v.toString()));
+                vPairs.forEach(pStr => {
+                    let parts = pStr.split(',').map(Number);
+                    if (parts[0] === parts[1]) reqCopies += 2 * Math.ceil(N[pStr] / 2);
+                    else reqCopies += Math.ceil(N[pStr] / 2);
+                });
+                if (reqCopies > C[v]) pairErrors.add(v);
+            }
+
+            let overusedOps = new Set();
+            for (let pStr in N) {
+                let parts = pStr.split(',').map(Number); let A = parts[0], B = parts[1];
+                let maxPairs = (A === B) ? Math.floor((C[A]||0)/2) : Math.min(C[A]||0, C[B]||0);
+                if ((S[pStr] || 0) > maxPairs || (P[pStr] || 0) > maxPairs) overusedOps.add(pStr);
+            }
+
+            let pairingErrorFound = false; let duplicateOpErrorFound = false; let overused = false;
+
+            document.querySelectorAll('.cell').forEach(cell => {
+                let xSel = cell.querySelector('.val-x'); let ySel = cell.querySelector('.val-y'); let opSel = cell.querySelector('.op');
+                let x = parseInt(xSel.value); let y = parseInt(ySel.value); let op = opSel.value;
+
+                xSel.classList.remove('pairing-error'); ySel.classList.remove('pairing-error'); xSel.title = ""; ySel.title = "";
+
+                if (pairErrors.has(x)) { xSel.classList.add('pairing-error'); pairingErrorFound = true; xSel.title = "Mezclando parejas sin copias."; }
+                if (pairErrors.has(y)) { ySel.classList.add('pairing-error'); pairingErrorFound = true; ySel.title = "Mezclando parejas sin copias."; }
+
+                if (!isNaN(x) && !isNaN(y)) {
+                    let pStr = Math.min(x, y) + "," + Math.max(x, y);
+                    if (overusedOps.has(pStr)) {
+                        let M = (x === y) ? Math.floor((C[x]||0)/2) : Math.min(C[x]||0, C[y]||0);
+                        if (op === '+' && (S[pStr] || 0) > M) { xSel.classList.add('pairing-error'); ySel.classList.add('pairing-error'); duplicateOpErrorFound = true; }
+                        if (op === '*' && (P[pStr] || 0) > M) { xSel.classList.add('pairing-error'); ySel.classList.add('pairing-error'); duplicateOpErrorFound = true; }
+                    }
+                }
+            });
+
+            for (let val in counts) {
+                let c = counts[val]; let items = itemsByVal[val] || [];
+                let itemStates = items.map(el => ({ el, s: false, p: false, u: 0 }));
+
+                for(let i=0; i<c.s; i++) { let t = itemStates.find(st => !st.s); if(t) t.s = true; else overused = true; }
+                for(let i=0; i<c.p; i++) { let t = itemStates.find(st => !st.p); if(t) t.p = true; else overused = true; }
+                for(let i=0; i<c.u; i++) { let t = itemStates.find(st => (st.s?1:0)+(st.p?1:0)+st.u < 2); if(t) t.u++; else overused = true; }
+
+                for(let st of itemStates) {
+                    let slotsUsed = (st.s?1:0) + (st.p?1:0) + st.u;
+                    if(st.s && st.p) {
+                        st.el.classList.add('used-full'); st.el.title = "Pareja completa: Usado en suma (+) y producto (*).";
+                    } else if(slotsUsed > 0) {
+                        st.el.classList.add('used-half');
+                        if(st.s && st.u) st.el.title = "Usado en suma (+). El otro está en una operación pendiente.";
+                        else if(st.p && st.u) st.el.title = "Usado en producto (*). El otro está en una operación pendiente.";
+                        else if(st.u === 2) st.el.title = "Colocado 2 veces en operaciones pendientes.";
+                        else if(st.s) st.el.title = "Falta usar este número en un producto (*).";
+                        else if(st.p) st.el.title = "Falta usar este número en una suma (+).";
+                        else st.el.title = "Colocado en la cuadrícula (operación pendiente).";
+                    }
+                }
+            }
+
+            const msgEl = document.getElementById('message');
+            if (document.querySelector('.invalid-order')) {
+                let allowRepeats = document.getElementById('allowRepeats').checked;
+                let txt = allowRepeats ? "porque no están en orden ascendente (o superan el límite de 2 copias)." : "porque no están en orden o hay repetidos.";
+                showMessage("Aviso: Hay números en rojo en la lista inferior " + txt, "error");
+            } else if (pairingErrorFound) { showMessage("Aviso: Casillas en rojo. Estás mezclando parejas y no tienes copias para todas.", "error"); } 
+            else if (duplicateOpErrorFound) { showMessage("Aviso: Has usado una misma pareja para repetir una operación (+ o *) más veces de las permitidas.", "error"); } 
+            else if (overused) { showMessage("Aviso: Has colocado un número más veces de las copias que tienes.", "error"); } 
+            else if (missingOps) { showMessage("Aviso: Has colocado números en una celda pero olvidaste elegir la operación (+ o *).", "error"); } 
+            else if (msgEl.innerText.includes('Aviso:')) { showMessage("", ""); }
+        }
+        
+        function updateHintUI() {
+            const hintBtn = document.getElementById('btn-hint');
+            if ((currentDifficulty === 'alta' && hintsUsed.total >= hintLimits.total) ||
+                (currentDifficulty === 'media' && hintsUsed.bottom >= hintLimits.bottom && hintsUsed.grid >= hintLimits.grid)) {
+                hintBtn.innerHTML = `💡 Sin Pistas`; hintBtn.disabled = true; return;
+            }
+            if (currentDifficulty === 'baja') hintBtn.innerHTML = `💡 Pista (∞)`;
+            else if (currentDifficulty === 'media') {
+                let leftB = hintLimits.bottom - hintsUsed.bottom, leftG = hintLimits.grid - hintsUsed.grid;
+                hintBtn.innerHTML = `💡 Pista (Lst:${leftB}|Cd:${leftG})`;
+            } else if (currentDifficulty === 'alta') {
+                let leftT = hintLimits.total - hintsUsed.total;
+                hintBtn.innerHTML = `💡 Pista (Quedan: ${leftT})`;
+            }
+        }
+
+        function showHint() {
+            if (currentDifficulty === 'alta' && hintsUsed.total >= hintLimits.total) return;
+
+            let bottomCandidates = [];
+            if (currentDifficulty !== 'media' || hintsUsed.bottom < hintLimits.bottom) {
+                document.querySelectorAll('.list-item input').forEach(input => {
+                    if (input.value !== input.dataset.correct) bottomCandidates.push(input);
+                });
+            }
+
+            let gridCandidates = [];
+            if (currentDifficulty !== 'media' || hintsUsed.grid < hintLimits.grid) {
+                document.querySelectorAll('.cell').forEach(cell => {
+                    const opSelect = cell.querySelector('.op'); const cop = cell.dataset.cop;
+                    if (currentDifficulty === 'baja') {
+                        const x = cell.querySelector('.val-x').value, y = cell.querySelector('.val-y').value;
+                        const cx = cell.dataset.cx, cy = cell.dataset.cy;
+                        let isFullCorrect = opSelect.value === cop && ((x == cx && y == cy) || (x == cy && y == cx));
+                        if (!isFullCorrect) gridCandidates.push(cell);
+                    } else {
+                        if (opSelect.value !== cop) gridCandidates.push(cell);
+                    }
+                });
+            }
+
+            let availablePools = [];
+            if (bottomCandidates.length > 0) availablePools.push('bottom');
+            if (gridCandidates.length > 0) availablePools.push('grid');
+
+            if (availablePools.length === 0) { showMessage("Ya no hay más pistas útiles.", "error"); return; }
+
+            let chosenPool = availablePools[Math.floor(Math.random() * availablePools.length)];
+
+            if (chosenPool === 'bottom') {
+                let input = bottomCandidates[Math.floor(Math.random() * bottomCandidates.length)];
+                input.value = input.dataset.correct; input.style.backgroundColor = '#d4edda';
+                hintsUsed.bottom++; hintsUsed.total++;
+                
+                validateBottomList(); updateInputConstraints(); updateDropdownOptions(); updateUsage();
+                showMessage("Pista: Número oculto revelado.", "hint-msg");
+            } else {
+                let cell = gridCandidates[Math.floor(Math.random() * gridCandidates.length)];
+                const opSelect = cell.querySelector('.op'); const cop = cell.dataset.cop;
+                
+                if (currentDifficulty === 'baja') {
+                    document.querySelectorAll('.list-item input').forEach(inp => {
+                        if(inp.value !== inp.dataset.correct) { inp.value = inp.dataset.correct; }
+                    });
+                    validateBottomList(); updateInputConstraints(); updateDropdownOptions();
+                    
+                    cell.querySelector('.val-x').value = cell.dataset.cx;
+                    cell.querySelector('.val-y').value = cell.dataset.cy;
+                    opSelect.value = cop; cell.style.backgroundColor = '#d4edda'; 
+                    showMessage("Pista: Operación completa resuelta.", "hint-msg");
+                } else {
+                    opSelect.value = cop; opSelect.classList.add('highlight-op'); 
+                    showMessage("Pista: Operador revelado.", "hint-msg");
+                }
+                hintsUsed.grid++; hintsUsed.total++; updateCellCompleteState(); updateDropdownOptions(); updateUsage();
+            }
+            updateHintUI(); saveProgress(true);
+        }
+
+        function revealSolution() {
+            if (confirm("¿Estás seguro de que quieres rendirte y ver la solución completa?")) {
+                document.getElementById('btn-hint').disabled = true;
+
+                document.querySelectorAll('.list-item input').forEach(input => {
+                    input.value = input.dataset.correct;
+                    input.style.backgroundColor = '#f8d7da'; input.readOnly = true;
+                });
+                
+                validateBottomList(); updateInputConstraints(); updateDropdownOptions(); 
+
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.querySelector('.val-x').value = cell.dataset.cx;
+                    cell.querySelector('.val-y').value = cell.dataset.cy;
+                    cell.querySelector('.op').value = cell.dataset.cop;
+                    
+                    cell.classList.remove('cell-complete', 'cell-correct', 'cell-partial', 'cell-wrong');
+                    cell.style.backgroundColor = '#f8d7da'; 
+                    cell.querySelector('.val-x').disabled = true;
+                    cell.querySelector('.val-y').disabled = true;
+                    cell.querySelector('.op').disabled = true;
+                    
+                    let btnClear = cell.querySelector('.clear-cell');
+                    if(btnClear) btnClear.style.display = 'none';
+                });
+
+                updateUsage(); showMessage("Solución revelada. Genera nuevo reto.", "error"); saveProgress(true);
+            }
+        }
+
+        function checkSolution() {
+            let anyIncomplete = false; let anyCellError = false;
+
+            document.querySelectorAll('.cell').forEach(cell => {
+                const xVal = cell.querySelector('.val-x').value; const yVal = cell.querySelector('.val-y').value; const opVal = cell.querySelector('.op').value;
+
+                if (xVal !== '?' && yVal !== '?' && opVal !== '?') {
+                    const ux = parseInt(xVal); const uy = parseInt(yVal);
+                    const target = parseInt(cell.querySelector('.target-num').dataset.val);
+                    const cx = parseInt(cell.dataset.cx); const cy = parseInt(cell.dataset.cy); const cop = cell.dataset.cop;
+
+                    const isOpCorrect = (opVal === cop);
+                    const isExactMatch = isOpCorrect && ((ux === cx && uy === cy) || (ux === cy && uy === cx));
+                    
+                    let isMathCorrect = false;
+                    if (opVal === '+') isMathCorrect = (ux + uy === target);
+                    if (opVal === '*') isMathCorrect = (ux * uy === target);
+                    
+                    const isPartiallyCorrect = isOpCorrect || (ux === cx || ux === cy || uy === cx || uy === cy) || isMathCorrect;
+
+                    cell.classList.remove('cell-complete', 'cell-correct', 'cell-partial', 'cell-wrong');
+
+                    if (isExactMatch) { cell.classList.add('cell-correct'); } 
+                    else if (isPartiallyCorrect) { cell.classList.add('cell-partial'); anyCellError = true; } 
+                    else { cell.classList.add('cell-wrong'); anyCellError = true; }
+                } else { anyIncomplete = true; }
+            });
+
+            if(document.querySelector('.pairing-error') || document.querySelector('.invalid-order') || document.querySelector('.missing-op')) {
+                showMessage("Arregla los errores formales marcados en rojo antes de comprobar el final.", "error"); return;
+            }
+
+            if (anyCellError) { showMessage("Sigue intentándolo. Las celdas naranja tienen parte de razón (o dan el resultado matemáticamente pero no cuadran con el resto), las rojas están completamente mal.", "error"); return; }
+            if (anyIncomplete) { showMessage("Vas por buen camino, ¡pero aún te faltan operaciones por completar!", "error"); return; }
+
+            let userList = [];
+            const listItems = document.querySelectorAll('#bottom-list .list-item');
+            for (let item of listItems) {
+                let val = parseInt(item.querySelector('input') ? item.querySelector('input').value : item.dataset.val);
+                if (isNaN(val)) { showMessage("Faltan números en la lista inferior.", "error"); return; }
+                userList.push(val);
+            }
+            userList.sort((a, b) => a - b);
+
+            const cells = document.querySelectorAll('.cell');
+            let sumPairs = [], prodPairs = [];
+
+            for (let cell of cells) {
+                const x = parseInt(cell.querySelector('.val-x').value); const op = cell.querySelector('.op').value; const y = parseInt(cell.querySelector('.val-y').value);
+                let pairStr = [Math.min(x, y), Math.max(x, y)].join(',');
+                if (op === "+") sumPairs.push(pairStr); if (op === "*") prodPairs.push(pairStr);
+            }
+
+            sumPairs.sort(); prodPairs.sort();
+            if (sumPairs.join('|') !== prodPairs.join('|')) { showMessage("Las parejas de suma y multiplicación no coinciden en el global.", "error"); return; }
+
+            let pairsNumbers = [];
+            sumPairs.forEach(p => { let nums = p.split(',').map(Number); pairsNumbers.push(nums[0], nums[1]); });
+            pairsNumbers.sort((a, b) => a - b);
+
+            if (pairsNumbers.join(',') !== userList.join(',')) { showMessage("Los números de la cuadrícula no coinciden exactamente con la lista inferior.", "error"); return; }
+
+            showMessage("¡Enhorabuena! Todo es correcto. 🎉", "success");
+            document.getElementById('btn-hint').disabled = true; localStorage.removeItem(SAVE_KEY); 
+            document.querySelectorAll('.clear-cell').forEach(btn => btn.style.display = 'none');
+        }
+
+        function saveProgress(silent = false) {
+            let gridState = [];
+            document.querySelectorAll('.cell').forEach(cell => {
+                gridState.push({
+                    x: cell.querySelector('.val-x').value, op: cell.querySelector('.op').value, y: cell.querySelector('.val-y').value,
+                    bgColor: cell.style.backgroundColor, opClass: cell.querySelector('.op').className, disabled: cell.querySelector('.val-x').disabled,
+                    isComplete: cell.classList.contains('cell-complete'), isCorrect: cell.classList.contains('cell-correct'), 
+                    isPartial: cell.classList.contains('cell-partial'), isWrong: cell.classList.contains('cell-wrong')
+                });
+            });
+
+            let listState = [];
+            document.querySelectorAll('.list-item input').forEach(input => {
+                listState.push({ val: input.value, bgColor: input.style.backgroundColor, readOnly: input.readOnly });
+            });
+
+            const saveData = {
+                settings: { 
+                    difficulty: currentDifficulty, maxRange: document.getElementById('maxRange').value, 
+                    hiddenCount: document.getElementById('hiddenCount').value,
+                    allowRepeats: document.getElementById('allowRepeats').checked 
+                },
+                solution: { list: currentSolution.list, pairs: currentSolution.pairs, gridData: currentSolution.gridData, hiddenIndices: Array.from(currentSolution.hiddenIndices) },
+                hints: { limits: hintLimits, used: hintsUsed }, uiState: { grid: gridState, list: listState, hintBtnDisabled: document.getElementById('btn-hint').disabled }
+            };
+
+            localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+            if (!silent) showMessage("Progreso guardado. 💾", "success");
+        }
+
+        function loadProgress() {
+            const savedStr = localStorage.getItem(SAVE_KEY);
+            if (!savedStr) return false;
+
+            try {
+                const data = JSON.parse(savedStr);
+                document.getElementById('difficulty').value = data.settings.difficulty;
+                document.getElementById('maxRange').value = data.settings.maxRange;
+                document.getElementById('hiddenCount').value = data.settings.hiddenCount;
+                document.getElementById('allowRepeats').checked = data.settings.allowRepeats !== undefined ? data.settings.allowRepeats : true;
+                currentDifficulty = data.settings.difficulty;
+
+                currentSolution = {
+                    list: data.solution.list, pairs: data.solution.pairs,
+                    gridData: data.solution.gridData, hiddenIndices: new Set(data.solution.hiddenIndices) 
+                };
+                hintLimits = data.hints.limits; hintsUsed = data.hints.used;
+
+                renderPuzzle();
+
+                const listInputs = document.querySelectorAll('.list-item input');
+                data.uiState.list.forEach((state, i) => {
+                    listInputs[i].value = state.val; listInputs[i].style.backgroundColor = state.bgColor; listInputs[i].readOnly = state.readOnly;
+                });
+
+                validateBottomList();
+                updateInputConstraints();
+                updateDropdownOptions(); 
+
+                const cells = document.querySelectorAll('.cell');
+                data.uiState.grid.forEach((state, i) => {
+                    const cell = cells[i];
+                    cell.querySelector('.val-x').value = state.x; cell.querySelector('.op').value = state.op; cell.querySelector('.val-y').value = state.y;
+                    cell.style.backgroundColor = state.bgColor; cell.querySelector('.op').className = state.opClass;
+                    
+                    if (state.isComplete) cell.classList.add('cell-complete');
+                    if (state.isCorrect) cell.classList.add('cell-correct');
+                    if (state.isPartial) cell.classList.add('cell-partial');
+                    if (state.isWrong) cell.classList.add('cell-wrong');
+
+                    if (state.disabled) { 
+                        cell.querySelector('.val-x').disabled = true; cell.querySelector('.val-y').disabled = true; cell.querySelector('.op').disabled = true;
+                        let btnClear = cell.querySelector('.clear-cell');
+                        if (btnClear) btnClear.style.display = 'none';
+                    }
+                });
+
+                updateDropdownOptions(); 
+                updateUsage(); 
+                
+                document.getElementById('btn-hint').disabled = data.uiState.hintBtnDisabled;
+                updateHintUI(); showMessage("Partida cargada. 📂", "success"); return true;
+            } catch (e) { return false; }
+        }
+
+        function showMessage(text, type) {
+            const msgEl = document.getElementById('message');
+            msgEl.innerText = text; msgEl.className = type;
+        }
+
+        window.onload = () => { if (!loadProgress()) generatePuzzle(); };
+    </script>
+    
+    <!-- Registrar el Service Worker (Para iPhone) -->
+    <script>
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("service-worker.js");
+        }
+      </script>
+</body>
+</html>
